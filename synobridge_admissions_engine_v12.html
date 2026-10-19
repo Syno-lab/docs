@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synobridge Admissions Engine V12 - 多體系選校診斷</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body{font-family:Inter,"PingFang TC","Microsoft JhengHei",sans-serif}
+  input[type=range]{accent-color:#4f46e5;width:100%}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:1rem;padding:1.25rem}
+  .h{font-size:12px;font-weight:900;color:#334155;border-bottom:1px solid #e2e8f0;padding-bottom:.6rem;margin-bottom:.9rem}
+  .lbl{font-size:11px;font-weight:700;color:#475569;display:flex;justify-content:space-between;margin-bottom:.25rem}
+  .sel{width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:.5rem;padding:.45rem;font-size:12px;font-weight:600;color:#334155}
+  .row{margin-bottom:.75rem}
+  .box{border:1px solid;border-radius:.75rem;padding:.75rem;margin-bottom:.75rem}
+  .chk{display:flex;gap:.5rem;align-items:flex-start;font-size:11px;font-weight:600;color:#334155;margin-bottom:.4rem;cursor:pointer}
+  .note{font-size:10px;color:#64748b;line-height:1.55}
+  .mono{font-family:ui-monospace,monospace}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-16">
+
+<header class="bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 text-white sticky top-0 z-30 shadow-xl">
+  <div class="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
+    <div class="w-11 h-11 bg-gradient-to-tr from-indigo-500 to-sky-400 rounded-2xl flex items-center justify-center font-black text-xl mono">S</div>
+    <div>
+      <h1 class="text-xl font-black">SYNOBRIDGE <span class="text-indigo-300 text-xs mono bg-indigo-950/80 border border-indigo-500/40 px-2 py-0.5 rounded-full">V12 AE</span></h1>
+      <p class="text-[11px] text-slate-400">多體系選校診斷：資格、風險、選校結構與行動建議（2026-27 申請季）</p>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 py-6 grid lg:grid-cols-12 gap-6">
+
+<!-- ================= 輸入 ================= -->
+<div class="lg:col-span-5 space-y-5">
+
+  <section class="card">
+    <div class="h flex justify-between"><span>1. 目標院校</span><span id="count" class="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full mono"></span></div>
+    <select id="school-add" class="sel mb-3"></select>
+    <div id="chips" class="flex flex-wrap gap-2"></div>
+  </section>
+
+  <section class="card">
+    <div class="h">2. 申請類型與身份</div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="row"><div class="lbl"><span>學位</span></div>
+        <select id="degree" class="sel"><option value="undergrad">本科</option><option value="master">研究生</option></select></div>
+      <div class="row" id="wrap-apptype"><div class="lbl"><span>本科類型</span></div>
+        <select id="apptype" class="sel"><option value="freshman">新生</option><option value="transfer">轉學</option></select></div>
+      <div class="row hidden" id="wrap-pgtype"><div class="lbl"><span>研究生類型</span></div>
+        <select id="pgtype" class="sel"><option value="taught">授課型碩士</option><option value="phd">博士</option></select></div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="row"><div class="lbl"><span>申請人身份</span></div>
+        <select id="residency" class="sel">
+          <option value="intl">國際生</option><option value="CA">美國：加州居民</option><option value="VA">美國：維吉尼亞州居民</option>
+          <option value="NC">美國：北卡州居民</option><option value="MI">美國：密西根州居民</option><option value="other_us">美國：其他州居民</option>
+        </select></div>
+      <div class="row"><div class="lbl"><span>申請專業</span></div><select id="major" class="sel"></select></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="h">3. 學業背景</div>
+    <div class="row"><div class="lbl"><span>課程/學歷體系</span></div><select id="curriculum" class="sel"></select></div>
+
+    <div id="g-us">
+      <div class="row"><div class="lbl"><span>Unweighted GPA (4.0)</span><span id="gpa-v" class="mono"></span></div><input type="range" id="gpa" min="2" max="4" step="0.01" value="3.85"></div>
+      <div class="row"><div class="lbl"><span>AP 5 分門數</span><span id="ap5-v" class="mono"></span></div><input type="range" id="ap5" min="0" max="12" step="1" value="5"></div>
+    </div>
+
+    <div id="g-ib" class="hidden">
+      <div class="row"><div class="lbl"><span>IB 預估/實際總分</span><span id="ib-v" class="mono"></span></div><input type="range" id="ib" min="24" max="45" step="1" value="39"></div>
+      <label class="chk"><input type="checkbox" id="ib-aa" checked> 數學為 Math AA HL（英國理工/經濟類常見要求）</label>
+    </div>
+
+    <div id="g-al" class="hidden">
+      <p class="note mb-2">英國按科目組合判斷，填寫 3 到 4 科預估成績。</p>
+      <div id="al-rows" class="space-y-2 mb-2"></div>
+    </div>
+
+    <div id="g-gk" class="hidden">
+      <div class="row"><div class="lbl"><span>申請時間點</span></div>
+        <select id="gk-timeline" class="sel"><option value="current">高三在讀（高考尚未出分）</option><option value="gap">已完成高考（Gap Year 申請）</option></select></div>
+      <div class="row"><div class="lbl"><span>全省排名（實際或預估）</span></div>
+        <select id="gk-rank" class="sel">
+          <option value="0.05">前 0.05%</option><option value="0.1">前 0.1%</option><option value="0.3">前 0.3%</option><option value="0.5">前 0.5%</option>
+          <option value="1" selected>前 1%</option><option value="2">前 2%</option><option value="3">前 3%</option><option value="5">前 5%</option>
+          <option value="10">前 10%</option><option value="20">前 20%</option><option value="40">前 40%</option>
+        </select></div>
+      <div class="row"><div class="lbl"><span>高考總分（僅供參考，評估以排名為準）</span><span id="gk-score-v" class="mono"></span></div><input type="range" id="gk-score" min="400" max="750" step="5" value="635"></div>
+      <div class="row"><div class="lbl"><span>高考英語單科 (150)</span><span id="gk-eng-v" class="mono"></span></div><input type="range" id="gk-eng" min="60" max="150" step="1" value="130"></div>
+      <div class="row"><div class="lbl"><span>高中平時成績均分（美國院校主要看此項）</span><span id="hs-avg-v" class="mono"></span></div><input type="range" id="hs-avg" min="60" max="100" step="1" value="92"></div>
+      <div class="row"><div class="lbl"><span>AST 數學成績（LSE 高考路徑）</span></div>
+        <select id="ast" class="sel"><option value="none">未參加 AST</option><option value="lt210">低於 210</option><option value="210">210 至 249</option><option value="250">250 以上</option></select></div>
+      <label class="chk"><input type="checkbox" id="gk-designated"> 就讀墨爾本大學認可的指定重點高中</label>
+    </div>
+
+    <div id="g-dse" class="hidden">
+      <div class="row"><div class="lbl"><span>DSE Best 5（不含公民與社會發展科）</span><span id="dse-v" class="mono"></span></div><input type="range" id="dse" min="10" max="35" step="1" value="27"></div>
+      <div class="row"><div class="lbl"><span>英國語文等級</span></div>
+        <select id="dse-eng" class="sel"><option>5**</option><option>5*</option><option selected>5</option><option>4</option><option>3</option><option>2</option></select></div>
+      <label class="chk"><input type="checkbox" id="dse-3322" checked> 已達 JUPAS 最低要求 3322，且公民與社會發展科達標</label>
+      <label class="chk"><input type="checkbox" id="dse-m"> 修讀數學延伸部分 M1/M2</label>
+    </div>
+
+    <div id="g-gsat" class="hidden">
+      <div class="row"><div class="lbl"><span>學測總級分 (60)</span><span id="gsat-v" class="mono"></span></div><input type="range" id="gsat" min="30" max="60" step="1" value="52"></div>
+    </div>
+
+    <div id="g-transfer" class="hidden box border-cyan-200 bg-cyan-50/50">
+      <div class="row"><div class="lbl"><span>大學 GPA (4.0)</span><span id="col-gpa-v" class="mono"></span></div><input type="range" id="col-gpa" min="2" max="4" step="0.01" value="3.7"></div>
+      <div class="row"><div class="lbl"><span>轉入年級</span></div>
+        <select id="standing" class="sel"><option value="junior">大三轉入（60 學分以上）</option><option value="sophomore">大二轉入（30 至 45 學分）</option></select></div>
+      <div class="row"><div class="lbl"><span>轉學協議</span></div>
+        <select id="contract" class="sel"><option value="none">無</option><option value="tag">TAG（僅 6 所 UC 分校，且僅限加州社區學院）</option><option value="adt">ADT（主要對應 CSU）</option></select></div>
+      <label class="chk"><input type="checkbox" id="major-prep" checked> 已完成目標專業 Major Prep 先修課</label>
+      <label class="chk"><input type="checkbox" id="partner32"> 就讀 3+2 項目的合作院校</label>
+    </div>
+
+    <div id="g-master" class="hidden box border-indigo-200 bg-indigo-50/50">
+      <div class="row"><div class="lbl"><span>本科加權均分（百分制換算）</span><span id="pg-avg-v" class="mono"></span></div><input type="range" id="pg-avg" min="60" max="100" step="1" value="86"></div>
+      <label class="chk"><input type="checkbox" id="pg-list" checked> 本科院校在目標院校的認可名單內（以各校名單為準）</label>
+      <div class="row"><div class="lbl"><span>實習/工作經歷相關度</span><span id="pg-work-v" class="mono"></span></div><input type="range" id="pg-work" min="0" max="10" step="1" value="5"></div>
+      <div id="g-phd" class="hidden">
+        <div class="row"><div class="lbl"><span>與目標導師研究方向匹配度</span><span id="phd-fit-v" class="mono"></span></div><input type="range" id="phd-fit" min="1" max="10" step="1" value="6"></div>
+        <div class="row"><div class="lbl"><span>研究經歷與成果質量</span><span id="phd-evidence-v" class="mono"></span></div><input type="range" id="phd-evidence" min="1" max="10" step="1" value="6"></div>
+        <p class="note">博士評估不以期刊影響因子計分，看研究方向匹配、方法訓練與推薦信。</p>
+      </div>
+    </div>
+
+    <div id="g-test" class="box border-slate-200 bg-slate-50">
+      <div class="row"><div class="lbl"><span>SAT/ACT 狀態（美國院校）</span></div>
+        <select id="sat-status" class="sel">
+          <option value="have">已有成績</option>
+          <option value="abroad">尚未考，計劃出境應試</option>
+          <option value="cannot">無法參加（中國大陸普高無本地公開考場）</option>
+        </select></div>
+      <div id="g-sat-score">
+        <div class="row"><div class="lbl"><span>考試</span></div><select id="ttype" class="sel"><option value="sat">SAT</option><option value="act">ACT</option></select></div>
+        <div class="row"><div class="lbl"><span>分數</span><span id="tscore-v" class="mono"></span></div><input type="range" id="tscore" min="800" max="1600" step="10" value="1510"></div>
+      </div>
+      <p class="note">沒有成績時不會虛構分數，按各校政策提示替代方案或行動。</p>
+    </div>
+
+    <div class="box border-slate-200 bg-slate-50">
+      <div class="row"><div class="lbl"><span>語言證明</span></div>
+        <select id="ltype" class="sel"><option value="toefl">TOEFL iBT</option><option value="ielts">IELTS Academic</option><option value="det">Duolingo English Test</option><option value="waiver">英語授課背景，可申請豁免</option></select></div>
+      <div id="g-lang-score" class="row"><div class="lbl"><span>分數</span><span id="lscore-v" class="mono"></span></div><input type="range" id="lscore" min="60" max="120" step="1" value="105"></div>
+      <p class="note">TOEFL 2026 年起改為 1 至 6 分制，過渡期同時顯示 0 至 120 分，此處用 0 至 120。</p>
+    </div>
+  </section>
+
+  <section id="g-profile" class="card">
+    <div class="h">4. 學校背景（School Profile）</div>
+    <p class="note mb-2">招生官會把成績放在學校提供的課程與資源中判讀。中國大陸普高常缺英文學校概況與升學顧問推薦信。</p>
+    <div class="row"><div class="lbl"><span>學校開設的進階課程，你選修的情況</span></div>
+      <select id="prof-courses" class="sel"><option value="most">選修了學校提供的最高難度課程</option><option value="some" selected>選修了部分進階課程</option><option value="none">學校有進階課程但未選修</option></select></div>
+    <label class="chk"><input type="checkbox" id="prof-en" checked> 學校可提供英文 School Profile</label>
+    <label class="chk"><input type="checkbox" id="prof-counselor" checked> 有升學顧問（Counselor）推薦信</label>
+    <label class="chk"><input type="checkbox" id="prof-rank"> 學校提供年級排名</label>
+    <label class="chk"><input type="checkbox" id="ctx-limited"> 學校資源有限（未開設進階課程、偏遠地區等）</label>
+  </section>
+
+  <section id="g-uk" class="card hidden">
+    <div class="h">5. 英國院校專項</div>
+    <div class="row"><div class="lbl"><span>對應入學筆試百分位（ESAT/TMUA/MAT/PAT/TSA/LNAT/UCAT）</span><span id="uk-pct-v" class="mono"></span></div><input type="range" id="uk-pct" min="0" max="100" step="1" value="70"></div>
+    <div class="row"><div class="lbl"><span>學術面試準備度</span><span id="uk-iv-v" class="mono"></span></div><input type="range" id="uk-iv" min="1" max="10" step="1" value="6"></div>
+    <div class="row"><div class="lbl"><span>超學科探索（Super-curricular）深度</span><span id="uk-sc-v" class="mono"></span></div><input type="range" id="uk-sc" min="1" max="10" step="1" value="6"></div>
+    <p class="note">筆試按院校與專業自動對應，結果卡片中會列出。</p>
+  </section>
+
+  <section id="g-sg" class="card hidden">
+    <div class="h">新加坡院校專項</div>
+    <label class="chk"><input type="checkbox" id="sg-aba"> 提交能力導向招生（ABA）材料</label>
+  </section>
+
+  <section id="g-usround" class="card">
+    <div class="h">6. 美國申請策略</div>
+    <div class="row"><div class="lbl"><span>提前申請學校（ED/REA/SCEA 只能選一所）</span></div><select id="early-school" class="sel"></select></div>
+    <div class="row"><div class="lbl"><span>需求型助學金</span></div>
+      <select id="aid" class="sel"><option value="no">不申請</option><option value="yes">申請</option></select></div>
+  </section>
+
+  <section class="card">
+    <div class="h">7. 文書、推薦信與面試</div>
+    <div class="row"><div class="lbl"><span>文書品質</span><span id="essay-v" class="mono"></span></div><input type="range" id="essay" min="1" max="10" step="0.5" value="7"></div>
+    <div class="row"><div class="lbl"><span>推薦信強度</span><span id="rec-v" class="mono"></span></div><input type="range" id="rec" min="1" max="10" step="0.5" value="7"></div>
+    <div class="row"><div class="lbl"><span>求知慾與學術好奇心</span><span id="intellect-v" class="mono"></span></div><input type="range" id="intellect" min="1" max="10" step="0.5" value="7"></div>
+    <div class="row"><div class="lbl"><span>對目標院校的了解與契合</span><span id="fit-v" class="mono"></span></div><input type="range" id="fit" min="1" max="10" step="0.5" value="7"></div>
+    <label class="chk"><input type="checkbox" id="alumni"> 已參加校友或第三方面試</label>
+    <div id="g-alumni-score" class="row hidden"><div class="lbl"><span>面試表現</span><span id="alumni-score-v" class="mono"></span></div><input type="range" id="alumni-score" min="1" max="10" step="1" value="7"></div>
+  </section>
+
+  <section class="card">
+    <div class="h">8. 活動深度與個人貢獻</div>
+    <p class="note mb-2">按每項活動的投入、角色與可驗證影響評估，不以活動類型或群體標籤判斷。</p>
+    <div class="row"><div class="lbl"><span>長期持續投入</span><span id="depth-v" class="mono"></span></div><input type="range" id="depth" min="1" max="10" step="1" value="7"></div>
+    <div class="row"><div class="lbl"><span>可驗證的影響與成果</span><span id="impact-v" class="mono"></span></div><input type="range" id="impact" min="1" max="10" step="1" value="6"></div>
+    <div class="row"><div class="lbl"><span>個人角色與主導程度</span><span id="role-v" class="mono"></span></div><input type="range" id="role" min="1" max="10" step="1" value="6"></div>
+    <div class="row"><div class="lbl"><span>與專業相關的學術延伸/科研</span><span id="acad-ext-v" class="mono"></span></div><input type="range" id="acad-ext" min="1" max="10" step="1" value="6"></div>
+    <div class="row"><div class="lbl"><span>最高競賽/獎項層級</span></div>
+      <select id="award" class="sel"><option value="none">無</option><option value="school">校級</option><option value="province" selected>省/州級</option><option value="national">全國級</option><option value="intl">國際級</option></select></div>
+    <div id="g-hook" class="row"><div class="lbl"><span>特殊身份（僅美國院校）</span></div>
+      <select id="hook" class="sel"><option value="none">無</option><option value="legacy">校友子女</option><option value="athlete">運動員特招</option><option value="donor">捐贈關係</option></select></div>
+  </section>
+
+  <button id="run" class="w-full py-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-slate-900 hover:brightness-110 text-white rounded-2xl font-black text-sm shadow-xl">開始診斷</button>
+</div>
+
+<!-- ================= 結果 ================= -->
+<div class="lg:col-span-7 space-y-5">
+  <div id="empty" class="h-[420px] flex flex-col items-center justify-center bg-white border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center">
+    <h4 class="font-bold text-slate-700">尚未診斷</h4>
+    <p class="text-xs text-slate-400 mt-2 max-w-sm">填寫左側資料後點「開始診斷」。診斷後修改任何輸入，結果會自動更新。</p>
+  </div>
+  <div id="results" class="hidden space-y-5">
+    <div id="portfolio"></div>
+    <div id="cards" class="space-y-4"></div>
+    <div class="card">
+      <div class="h">模型說明</div>
+      <p class="note">1. 本工具做選校診斷，不預測錄取機率。「競爭力指數」是示意值，用於比較同一申請人在不同院校的相對位置。</p>
+      <p class="note">2. 標註「示意」的加減分（如 Need-Aware -4、非州內 -4、提前申請 +3）是經驗假設，沒有經過真實數據校準。</p>
+      <p class="note">3. 標註「需核實」的政策，請以學校官網當季公布為準。院校每年的名額、需求與政策都會變化。</p>
+      <p class="note">4. 未建模的因素包括：院校當年的招生需求與 yield 目標、推薦人具體內容、作品集、面試現場表現等。</p>
+    </div>
+  </div>
+</div>
+</main>
+
+<script>
+/* ================= 工具 ================= */
+const $ = id => document.getElementById(id);
+const val = id => $(id).value;
+const num = id => Number($(id).value);
+const chk = id => $(id).checked;
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+function interp(x, pts) {
+  if (x <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) {
+    if (x <= pts[i][0]) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+      return y0 + (x - x0) / (x1 - x0) * (y1 - y0);
+    }
+  }
+  return pts[pts.length - 1][1];
+}
+
+/* ================= 換算表（概略值，示意） ================= */
+const GPA_PTS = [[2, 10], [3, 40], [3.3, 55], [3.5, 66], [3.7, 77], [3.8, 83], [3.9, 89], [4, 95]];
+const IB_PTS = [[24, 20], [30, 45], [34, 64], [36, 72], [38, 80], [40, 87], [42, 93], [45, 100]];
+const DSE_PTS = [[10, 10], [15, 22], [20, 45], [22, 55], [24, 64], [26, 72], [28, 80], [30, 87], [32, 93], [35, 100]];
+const GSAT_PTS = [[30, 15], [40, 40], [44, 52], [48, 64], [52, 78], [56, 90], [60, 100]];
+const PCT_PTS = [[60, 10], [75, 45], [80, 60], [85, 74], [88, 82], [90, 88], [95, 98], [100, 100]];
+const RANK_PTS = [[0.05, 100], [0.1, 98], [0.3, 95], [0.5, 93], [1, 90], [2, 86], [3, 83], [5, 79], [10, 72], [20, 62], [40, 45]];
+const SAT_PTS = [[800, 0], [1200, 38], [1300, 52], [1400, 68], [1450, 77], [1500, 85], [1550, 93], [1600, 100]];
+const ACT_PTS = [[20, 20], [28, 52], [30, 64], [32, 76], [33, 82], [34, 88], [35, 94], [36, 100]];
+const TOEFL_IELTS = [[60, 5.5], [79, 6.5], [94, 7], [102, 7.5], [110, 8], [115, 8.5], [120, 9]];
+const DET_IELTS = [[80, 5.5], [95, 6], [105, 6.5], [120, 7], [130, 7.5], [140, 8], [160, 9]];
+const AL_GRADE = { 'A*': 100, 'A': 88, 'B': 72, 'C': 58, 'D': 45 };
+const AWARD_PTS = { none: 0, school: 2, province: 4, national: 7, intl: 10 };
+
+/* ================= 專業 ================= */
+// hot: 按學院/專業錄取時的高競爭方向；math: 需要數學 A*/A；fm: A-Level 常建議 Further Maths；stem: 理工
+const MAJORS = {
+  cs: { l: '計算機科學', hot: 1, math: 1, fm: 1, stem: 1 },
+  ai: { l: '人工智慧/機器人', hot: 1, math: 1, fm: 1, stem: 1 },
+  data_science: { l: '數據科學', hot: 1, math: 1, fm: 0, stem: 1 },
+  engineering: { l: '工程', hot: 1, math: 1, fm: 1, stem: 1 },
+  math: { l: '數學', hot: 0, math: 1, fm: 1, stem: 1 },
+  physics: { l: '物理', hot: 0, math: 1, fm: 0, stem: 1 },
+  chemistry: { l: '化學', hot: 0, math: 0, fm: 0, stem: 1 },
+  biology: { l: '生物科學', hot: 0, math: 0, fm: 0, stem: 1 },
+  premed: { l: '醫學/醫學預科', hot: 0, math: 0, fm: 0, stem: 1 },
+  economics: { l: '經濟學', hot: 0, math: 1, fm: 0, stem: 0 },
+  business: { l: '商科/管理', hot: 1, math: 1, fm: 0, stem: 0 },
+  fina: { l: '金融/量化', hot: 1, math: 1, fm: 1, stem: 0 },
+  stats: { l: '統計/會計', hot: 0, math: 1, fm: 0, stem: 0 },
+  polisci: { l: '政治學', hot: 0, math: 0, fm: 0, stem: 0 },
+  psychology: { l: '心理學', hot: 0, math: 0, fm: 0, stem: 0 },
+  law: { l: '法學', hot: 0, math: 0, fm: 0, stem: 0 },
+  history: { l: '歷史', hot: 0, math: 0, fm: 0, stem: 0 },
+  philosophy: { l: '哲學', hot: 0, math: 0, fm: 0, stem: 0 },
+  humanities: { l: '其他人文學科', hot: 0, math: 0, fm: 0, stem: 0 },
+  undecided: { l: '未決定', hot: 0, math: 0, fm: 0, stem: 0 }
+};
+
+/* ================= 院校 =================
+   sys: usp 美國私立 / uspub 美國公立全人審查 / uc / uk / hk / sg / ca / au / dual
+   bar: 常見錄取區間的參考指數（示意）
+   test: required / flexible / optional / blind；alt: 無法應試時接受替代 true / 'verify' / false
+   early: 提前申請類型；nb: 國際生 Need-Blind true / false / 'verify'
+   majorAdmit: 按學院或專業錄取 */
+const SCHOOLS = [
+  { id: 'harvard', cn: '哈佛大學', en: 'Harvard', grp: 'Ivy League', sys: 'usp', rate: '3.6%', bar: 85, test: 'required', alt: 'verify', early: 'REA', nb: true },
+  { id: 'yale', cn: '耶魯大學', en: 'Yale', grp: 'Ivy League', sys: 'usp', rate: '3.7%', bar: 85, test: 'flexible', alt: true, early: 'SCEA', nb: true },
+  { id: 'princeton', cn: '普林斯頓大學', en: 'Princeton', grp: 'Ivy League', sys: 'usp', rate: '4.5%', bar: 85, test: 'optional', alt: true, early: 'SCEA', nb: true, verify: '本季標化可選；2027-28 申請季起要求 SAT/ACT（已核實）' },
+  { id: 'columbia', cn: '哥倫比亞大學', en: 'Columbia', grp: 'Ivy League', sys: 'usp', rate: '3.9%', bar: 84, test: 'optional', alt: true, early: 'ED', nb: false },
+  { id: 'upenn', cn: '賓夕法尼亞大學', en: 'UPenn', grp: 'Ivy League', sys: 'usp', rate: '5.4%', bar: 84, test: 'optional', alt: true, early: 'ED', nb: false, majorAdmit: true, verify: '標化政策需核實' },
+  { id: 'brown', cn: '布朗大學', en: 'Brown', grp: 'Ivy League', sys: 'usp', rate: '5.2%', bar: 84, test: 'required', alt: 'verify', early: 'ED', nb: 'verify' },
+  { id: 'dartmouth', cn: '達特茅斯學院', en: 'Dartmouth', grp: 'Ivy League', sys: 'usp', rate: '5.3%', bar: 83, test: 'required', alt: 'verify', early: 'ED', nb: true },
+  { id: 'cornell', cn: '康奈爾大學', en: 'Cornell', grp: 'Ivy League', sys: 'usp', rate: '7.3%', bar: 81, test: 'required', alt: 'verify', early: 'ED', nb: false, majorAdmit: true },
+  { id: 'mit', cn: '麻省理工學院', en: 'MIT', grp: 'Ivy Plus', sys: 'usp', rate: '4.5%', bar: 87, test: 'required', alt: false, early: 'EA', nb: true, noLegacy: true },
+  { id: 'stanford', cn: '史丹佛大學', en: 'Stanford', grp: 'Ivy Plus', sys: 'usp', rate: '3.7%', bar: 85, test: 'required', alt: 'verify', early: 'REA', nb: false, noLegacy: true, noDonor: true },
+  { id: 'caltech', cn: '加州理工學院', en: 'Caltech', grp: 'Ivy Plus', sys: 'usp', rate: '2.7%', bar: 88, test: 'required', alt: 'verify', early: 'REA', nb: 'verify', noLegacy: true, noDonor: true },
+  { id: 'duke', cn: '杜克大學', en: 'Duke', grp: 'Ivy Plus', sys: 'usp', rate: '5.1%', bar: 82, test: 'required', alt: 'verify', early: 'ED', nb: false, verify: '標化政策需核實' },
+  { id: 'jhu', cn: '約翰霍普金斯大學', en: 'JHU', grp: 'Ivy Plus', sys: 'usp', rate: '6.2%', bar: 82, test: 'required', alt: true, early: 'ED', nb: false, noLegacy: true },
+  { id: 'northwestern', cn: '西北大學', en: 'Northwestern', grp: 'Ivy Plus', sys: 'usp', rate: '7.2%', bar: 81, test: 'optional', alt: true, early: 'ED', nb: false },
+  { id: 'uchicago', cn: '芝加哥大學', en: 'UChicago', grp: 'Ivy Plus', sys: 'usp', rate: '5.4%', bar: 82, test: 'optional', alt: true, early: 'ED', nb: false },
+  { id: 'vanderbilt', cn: '范德堡大學', en: 'Vanderbilt', grp: 'Ivy Plus', sys: 'usp', rate: '6.1%', bar: 81, test: 'required', alt: 'verify', early: 'ED', nb: false, verify: '標化政策需核實' },
+  { id: 'ucla', cn: '加州大學洛杉磯分校', en: 'UCLA', grp: '美國公立', sys: 'uc', rate: '8.7%', bar: 84 },
+  { id: 'ucb', cn: '加州大學柏克萊分校', en: 'UC Berkeley', grp: '美國公立', sys: 'uc', rate: '11%', bar: 84 },
+  { id: 'ucsd', cn: '加州大學聖地牙哥分校', en: 'UC San Diego', grp: '美國公立', sys: 'uc', rate: '24%', bar: 78 },
+  { id: 'michigan', cn: '密西根大學安娜堡分校', en: 'UMich', grp: '美國公立', sys: 'uspub', st: 'MI', rate: '18%', bar: 76, test: 'optional', alt: true, early: 'EA', majorAdmit: true },
+  { id: 'uva', cn: '維吉尼亞大學', en: 'UVA', grp: '美國公立', sys: 'uspub', st: 'VA', rate: '17%', bar: 76, test: 'optional', alt: true, early: 'ED', majorAdmit: true, noLegacy: true, noDonor: true, verify: '標化政策需核實' },
+  { id: 'unc', cn: '北卡教堂山分校', en: 'UNC Chapel Hill', grp: '美國公立', sys: 'uspub', st: 'NC', rate: '15%', bar: 75, test: 'required', alt: 'verify', early: 'EA', note: '州外生（含國際生）名額上限約 18%', verify: '標化政策需核實' },
+  { id: 'cambridge', cn: '劍橋大學', en: 'Cambridge', grp: '英國 G5', sys: 'uk', rate: '15.6%', bar: 88, gk: 'top01', ielts: 7.5, iv: 'all' },
+  { id: 'oxford', cn: '牛津大學', en: 'Oxford', grp: '英國 G5', sys: 'uk', rate: '13.5%', bar: 86, gk: 'no', ielts: 7.0, iv: 'all', verify: '語言要求依專業為 IELTS 7.0 或 7.5' },
+  { id: 'imperial', cn: '帝國理工學院', en: 'Imperial', grp: '英國 G5', sys: 'uk', rate: '14%', bar: 84, gk: 'verify', ielts: 7.0, iv: 'some' },
+  { id: 'lse', cn: '倫敦政經學院', en: 'LSE', grp: '英國 G5', sys: 'uk', rate: '9%', bar: 82, gk: 'ast', ielts: 7.0, iv: 'none' },
+  { id: 'ucl', cn: '倫敦大學學院', en: 'UCL', grp: '英國 G5', sys: 'uk', rate: '29%', bar: 76, gk: 'no', ielts: 7.0, iv: 'some' },
+  { id: 'hku', cn: '香港大學', en: 'HKU', grp: '香港', sys: 'hk', rate: '', bar: 85, route: '高考路徑多為獨立招生，各省安排需核實' },
+  { id: 'cuhk', cn: '香港中文大學', en: 'CUHK', grp: '香港', sys: 'hk', rate: '', bar: 83, route: '高考路徑多為統招提前批，各省安排需核實' },
+  { id: 'hkust', cn: '香港科技大學', en: 'HKUST', grp: '香港', sys: 'hk', rate: '', bar: 83, route: '高考路徑多為獨立招生並設面試，需核實' },
+  { id: 'nus', cn: '新加坡國立大學', en: 'NUS', grp: '新加坡', sys: 'sg', rate: '', bar: 88 },
+  { id: 'ntu', cn: '南洋理工大學', en: 'NTU', grp: '新加坡', sys: 'sg', rate: '', bar: 84 },
+  { id: 'uoft', cn: '多倫多大學', en: 'U of Toronto', grp: '加拿大/澳洲', sys: 'ca', rate: '', bar: 82 },
+  { id: 'mcgill', cn: '麥吉爾大學', en: 'McGill', grp: '加拿大/澳洲', sys: 'ca', rate: '', bar: 82 },
+  { id: 'ubc', cn: '英屬哥倫比亞大學', en: 'UBC', grp: '加拿大/澳洲', sys: 'ca', rate: '', bar: 80 },
+  { id: 'unimelb', cn: '墨爾本大學', en: 'UniMelb', grp: '加拿大/澳洲', sys: 'au', rate: '', bar: 75 },
+  { id: 'columbia_32', cn: '哥大 3+2 工程', en: 'Columbia Combined Plan', grp: '3+2 工程合作', sys: 'dual', rate: '', bar: 80, aff: 'open' },
+  { id: 'dartmouth_32', cn: '達特茅斯 3+2', en: 'Dartmouth Dual Degree', grp: '3+2 工程合作', sys: 'dual', rate: '', bar: 80, aff: 'verify' },
+  { id: 'caltech_32', cn: '加州理工 3/2', en: 'Caltech 3/2', grp: '3+2 工程合作', sys: 'dual', rate: '', bar: 82, aff: 'required' }
+];
+const GROUPS = ['Ivy League', 'Ivy Plus', '美國公立', '英國 G5', '香港', '新加坡', '加拿大/澳洲', '3+2 工程合作'];
+const SCH = id => SCHOOLS.find(s => s.id === id);
+
+/* 英國筆試：按院校與專業對應（需核實） */
+const UK_TESTS = {
+  cambridge: { cs: 'TMUA', economics: 'TMUA', engineering: 'ESAT', physics: 'ESAT', chemistry: 'ESAT', biology: 'ESAT', ai: 'ESAT', math: 'STEP（條件錄取）', premed: 'UCAT', law: 'LNAT' },
+  oxford: { cs: 'MAT', math: 'MAT', physics: 'PAT', engineering: 'PAT', economics: 'TSA', polisci: 'TSA', psychology: 'TSA', philosophy: 'TSA', premed: 'UCAT', law: 'LNAT', history: 'HAT' },
+  imperial: { engineering: 'ESAT', physics: 'ESAT', chemistry: 'ESAT', cs: 'TMUA', math: 'TMUA', ai: 'TMUA', premed: 'UCAT' },
+  lse: { economics: 'TMUA', math: 'TMUA', fina: 'TMUA', stats: 'TMUA', data_science: 'TMUA' },
+  ucl: { premed: 'UCAT', law: 'LNAT' }
+};
+const ukTest = (id, major) => (UK_TESTS[id] || {})[major] || null;
+
+/* 課程選項 */
+const CURR = {
+  freshman: [['us_ap', '美國課程 (AP/SAT)'], ['ib', 'IB DP'], ['uk_alevel', 'A-Level'], ['cn_gaokao', '中國大陸普高（高考）'], ['hk_dse', '香港 DSE'], ['tw_gsat', '臺灣學測']],
+  transfer: [['cc', '美國社區學院'], ['lac', '美國文理學院'], ['us_uni', '美國四年制大學'], ['cn_uni', '中國大陸本科院校'], ['hk_ad', '香港副學士/高級文憑']],
+  master: [['cn_985', '中國 C9/985/211'], ['cn_other', '中國其他本科院校'], ['hk_uni', '港澳本科'], ['uk_uni', '英國本科'], ['us_uni_pg', '美國本科'], ['other_uni', '其他地區本科']]
+};
+const AL_SUBS = [['', '（不選）'], ['math', 'Mathematics'], ['fm', 'Further Mathematics'], ['physics', 'Physics'], ['chemistry', 'Chemistry'], ['biology', 'Biology'], ['economics', 'Economics'], ['cs', 'Computer Science'], ['history', 'History'], ['english', 'English Literature'], ['other', '其他科目']];
+const AL_DEFAULT = [['math', 'A*'], ['fm', 'A*'], ['physics', 'A'], ['', 'A']];
+
+/* ================= 狀態 ================= */
+let selected = ['harvard', 'ucla', 'cambridge', 'hku'];
+let lastMode = null, lastL = null, lastT = null, ran = false;
+const mode = () => val('degree') === 'master' ? 'master' : val('apptype');
+const selSchools = () => selected.map(SCH).filter(Boolean);
+
+/* ================= 介面建立 ================= */
+function buildStatic() {
+  $('school-add').innerHTML = '<option value="" selected>+ 加入院校（最多 10 所）</option>' +
+    GROUPS.map(g => `<optgroup label="${g}">${SCHOOLS.filter(s => s.grp === g).map(s => `<option value="${s.id}">${s.cn} (${s.en})${s.rate ? ' • ' + s.rate : ''}</option>`).join('')}</optgroup>`).join('');
+  $('major').innerHTML = Object.entries(MAJORS).map(([k, m]) => `<option value="${k}">${m.l}</option>`).join('');
+  $('al-rows').innerHTML = AL_DEFAULT.map(([sub, g], i) =>
+    `<div class="flex gap-2"><select id="al-sub-${i}" class="sel">${AL_SUBS.map(([v, t]) => `<option value="${v}" ${v === sub ? 'selected' : ''}>${t}</option>`).join('')}</select>
+     <select id="al-g-${i}" class="sel" style="width:6rem">${Object.keys(AL_GRADE).map(k => `<option ${k === g ? 'selected' : ''}>${k}</option>`).join('')}</select></div>`).join('');
+}
+function renderChips() {
+  $('count').textContent = `${selected.length} 所`;
+  $('chips').innerHTML = selSchools().map(s =>
+    `<span class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-xs font-bold rounded-xl">${s.cn}
+     <button data-rm="${s.id}" class="text-slate-400 hover:text-rose-600">×</button></span>`).join('');
+}
+function buildCurr(m) {
+  $('curriculum').innerHTML = CURR[m].map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
+  onCurr();
+}
+function onCurr() {
+  const c = val('curriculum');
+  if (c === 'cn_gaokao') $('sat-status').value = 'cannot';
+  else if (c === 'us_ap') $('sat-status').value = 'have';
+  if (mode() === 'master') $('pg-list').checked = ['cn_985', 'hk_uni', 'uk_uni', 'us_uni_pg'].includes(c);
+}
+function buildEarly() {
+  const cur = val('early-school') || '';
+  const opts = selSchools().filter(s => (s.sys === 'usp' || s.sys === 'uspub') && s.early);
+  $('early-school').innerHTML = '<option value="">不提前申請</option>' + opts.map(s => `<option value="${s.id}">${s.cn}（${s.early}）</option>`).join('');
+  $('early-school').value = opts.some(s => s.id === cur) ? cur : '';
+}
+function updateLangRange() {
+  const t = val('ltype');
+  if (t === lastL) return;
+  lastL = t;
+  const r = $('lscore');
+  const cfg = { toefl: [60, 120, 1, 105], ielts: [4, 9, 0.5, 7.5], det: [80, 160, 5, 130] }[t];
+  $('g-lang-score').classList.toggle('hidden', t === 'waiver');
+  if (cfg) { r.min = cfg[0]; r.max = cfg[1]; r.step = cfg[2]; r.value = cfg[3]; }
+}
+function updateTestRange() {
+  const t = val('ttype');
+  if (t === lastT) return;
+  lastT = t;
+  const r = $('tscore');
+  if (t === 'sat') { r.min = 800; r.max = 1600; r.step = 10; r.value = 1510; }
+  else { r.min = 20; r.max = 36; r.step = 1; r.value = 34; }
+}
+function outputs() {
+  document.querySelectorAll('input[type=range]').forEach(i => { const o = $(i.id + '-v'); if (o) o.textContent = i.value; });
+}
+function refresh() {
+  const m = mode(), fresh = m === 'freshman';
+  $('wrap-apptype').classList.toggle('hidden', val('degree') === 'master');
+  $('wrap-pgtype').classList.toggle('hidden', m !== 'master');
+  if (m !== lastMode) { lastMode = m; buildCurr(m); }
+  const c = val('curriculum'), sel = selSchools();
+  const show = (id, on) => $(id).classList.toggle('hidden', !on);
+  const hasUSH = sel.some(s => s.sys === 'usp' || s.sys === 'uspub');
+  show('g-us', c === 'us_ap'); show('g-ib', c === 'ib'); show('g-al', c === 'uk_alevel');
+  show('g-gk', c === 'cn_gaokao'); show('g-dse', c === 'hk_dse'); show('g-gsat', c === 'tw_gsat');
+  show('g-transfer', m === 'transfer'); show('g-master', m === 'master'); show('g-phd', m === 'master' && val('pgtype') === 'phd');
+  show('g-test', fresh && hasUSH); show('g-sat-score', val('sat-status') === 'have');
+  show('g-profile', fresh); show('g-uk', fresh && sel.some(s => s.sys === 'uk')); show('g-sg', sel.some(s => s.sys === 'sg'));
+  show('g-usround', fresh && hasUSH); show('g-hook', fresh); show('g-alumni-score', chk('alumni'));
+  buildEarly(); updateLangRange(); updateTestRange(); outputs();
+}
+
+/* ================= 讀取輸入 ================= */
+function getProfile() {
+  const al = [0, 1, 2, 3].map(i => ({ sub: val(`al-sub-${i}`), g: val(`al-g-${i}`) })).filter(x => x.sub);
+  return {
+    mode: mode(), pgType: val('pgtype'), residency: val('residency'), major: val('major'), curriculum: val('curriculum'),
+    gpa: num('gpa'), ap5: num('ap5'), ib: num('ib'), ibAA: chk('ib-aa'), al,
+    gkTimeline: val('gk-timeline'), gkRank: Number(val('gk-rank')), gkEng: num('gk-eng'), hsAvg: num('hs-avg'), ast: val('ast'), designated: chk('gk-designated'),
+    dse: num('dse'), dseEng: val('dse-eng'), d3322: chk('dse-3322'), dseM: chk('dse-m'), gsat: num('gsat'),
+    colGpa: num('col-gpa'), standing: val('standing'), contract: val('contract'), majorPrep: chk('major-prep'), partner32: chk('partner32'),
+    pgAvg: num('pg-avg'), pgList: chk('pg-list'), pgWork: num('pg-work'), phdFit: num('phd-fit'), phdEvidence: num('phd-evidence'),
+    satStatus: val('sat-status'), ttype: val('ttype'), tscore: num('tscore'), ltype: val('ltype'), lscore: num('lscore'),
+    profCourses: val('prof-courses'), profEn: chk('prof-en'), profCounselor: chk('prof-counselor'), profRank: chk('prof-rank'), ctxLimited: chk('ctx-limited'),
+    ukPct: num('uk-pct'), ukIv: num('uk-iv'), ukSc: num('uk-sc'), sgAba: chk('sg-aba'), earlySchool: val('early-school'), aid: val('aid'),
+    essay: num('essay'), rec: num('rec'), intellect: num('intellect'), fit: num('fit'), alumni: chk('alumni'), alumniScore: num('alumni-score'),
+    depth: num('depth'), impact: num('impact'), role: num('role'), acadExt: num('acad-ext'), award: val('award'), hook: val('hook')
+  };
+}
+
+/* ================= 指數計算 ================= */
+function alIndex(p) {
+  const v = p.al.map(x => AL_GRADE[x.g]).sort((a, b) => b - a).slice(0, 3);
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0;
+}
+function acadGeneral(p) {
+  switch (p.curriculum) {
+    case 'us_ap': return clamp(interp(p.gpa, GPA_PTS) + Math.min(p.ap5 * 1.2, 6), 0, 100);
+    case 'ib': return interp(p.ib, IB_PTS);
+    case 'uk_alevel': return alIndex(p);
+    case 'cn_gaokao': return interp(p.gkRank, RANK_PTS);
+    case 'hk_dse': return interp(p.dse, DSE_PTS);
+    case 'tw_gsat': return interp(p.gsat, GSAT_PTS);
+  }
+  if (p.mode === 'transfer') return interp(p.colGpa, GPA_PTS);
+  return interp(p.pgAvg, PCT_PTS);
+}
+// 美國院校：高考生以高中成績單為主
+const acadUS = p => p.curriculum === 'cn_gaokao' ? interp(p.hsAvg, PCT_PTS) : acadGeneral(p);
+const satIdx = p => p.ttype === 'sat' ? interp(p.tscore, SAT_PTS) : interp(p.tscore, ACT_PTS);
+const actIdx = p => clamp((p.depth * .3 + p.impact * .3 + p.role * .2 + p.acadExt * .2) * 10 + AWARD_PTS[p.award], 0, 100);
+const qualIdx = p => (p.essay * .4 + p.rec * .3 + p.intellect * .15 + p.fit * .15) * 10;
+function ieltsEq(p) {
+  if (p.ltype === 'ielts') return p.lscore;
+  if (p.ltype === 'toefl') return interp(p.lscore, TOEFL_IELTS);
+  if (p.ltype === 'det') return interp(p.lscore, DET_IELTS);
+  return 9;
+}
+
+/* ================= 結果工具 ================= */
+const ORDER = ['Unlikely', 'Reach', 'Target', 'Strong'];
+const capLabel = (st, cap) => (cap && ORDER.indexOf(st) > ORDER.indexOf(cap)) ? cap : st;
+function rateCap(rate) {
+  const r = parseFloat(rate);
+  if (isNaN(r)) return null;
+  return r < 10 ? 'Reach' : r < 25 ? 'Target' : null;
+}
+const base = s => ({ s, status: null, idx: null, risks: [], notes: [], acts: [], factors: [], forceMax: null });
+function inel(r, reason, act) {
+  r.status = 'Ineligible'; r.idx = 0; r.risks.unshift(reason);
+  if (act) r.acts.push(act);
+  return r;
+}
+function grade(r, idx, bar, p) {
+  r.idx = Math.round(clamp(idx, 0, 99));
+  const d = r.idx - bar;
+  let st = d >= 5 ? 'Strong' : d >= -3 ? 'Target' : d >= -12 ? 'Reach' : 'Unlikely';
+  if (p.mode !== 'master') st = capLabel(st, rateCap(r.s.rate));
+  if (r.forceMax) st = capLabel(st, r.forceMax);
+  r.status = st;
+  return r;
+}
+function langCheck(r, p, min) {
+  if (p.ltype === 'waiver') { r.notes.push('已標示語言豁免，請確認該校接受'); return; }
+  const e = ieltsEq(p);
+  if (e < min) {
+    r.risks.push(`語言成績約等於 IELTS ${e.toFixed(1)}，低於建議水平 ${min}`);
+    r.acts.push('提升語言成績至目標院校建議水平');
+  }
+}
+
+/* ================= 美國私立/公立全人審查 ================= */
+function evalUS(s, p) {
+  if (p.mode === 'master') return evalMaster(s, p);
+  const r = base(s), pub = s.sys === 'uspub';
+  let A;
+  if (p.mode === 'transfer') {
+    A = interp(p.colGpa, GPA_PTS);
+    r.notes.push(p.standing === 'junior' ? '大三轉入：主要看大學成績與先修課' : '大二轉入：仍會審閱高中成績與標化');
+    r.risks.push('頂尖私立大學轉學錄取率普遍很低');
+  } else {
+    A = acadUS(p);
+    const sat = p.satStatus === 'have' ? satIdx(p) : null;
+    if (s.test === 'required') {
+      if (sat !== null) A = A * .7 + sat * .3;
+      else if (p.satStatus === 'abroad') {
+        r.risks.push('該校要求 SAT/ACT，目前尚無成績');
+        r.acts.push('安排赴港澳或海外考場參加 SAT/ACT，並確認送分時間');
+      } else if (s.alt === true) {
+        r.notes.push('該校接受無法應試的學生以 AP/IB/A-Level/國家統考等成績替代，需在申請中說明');
+      } else if (s.alt === 'verify') {
+        r.risks.push('無法參加 SAT/ACT 時的替代規則需向招生辦確認');
+        r.acts.push(`向 ${s.en} 招生辦確認無法應試時接受的替代材料`);
+      } else {
+        A -= 6; r.factors.push('未提交必需標化 -6（示意）');
+        r.risks.push('該校原則上要求 SAT/ACT，沒有成績處於明顯劣勢');
+        r.acts.push(`申請 ${s.en} 前優先安排出境參加 SAT/ACT`);
+      }
+    } else if (s.test === 'flexible') {
+      if (sat !== null) A = A * .75 + sat * .25;
+      else r.notes.push('Test-Flexible：可用 AP/IB 等成績代替 SAT/ACT');
+    } else if (s.test === 'optional') {
+      if (sat !== null && sat > A) { A = A * .8 + sat * .2; r.factors.push('提交了高於學術水準的標化成績'); }
+      else r.notes.push('標化可選：未提交不影響評估');
+    }
+    if (p.curriculum === 'cn_gaokao') {
+      r.notes.push(p.gkTimeline === 'current'
+        ? '高考 6 月出分，晚於美國放榜，學術評估以高中成績單與學考為主'
+        : 'Gap Year 申請：高考成績可作為已完成的國家考試補充證明');
+    }
+    if (!p.profEn || !p.profCounselor) {
+      A -= 3; r.factors.push('學校背景資料不足 -3（示意）');
+      r.risks.push('缺少英文 School Profile 或升學顧問推薦信，招生官難以在學校背景中判讀成績');
+      r.acts.push('請學校準備英文 School Profile 與升學顧問推薦信');
+    }
+    if (p.profCourses === 'none') {
+      if (p.ctxLimited) r.notes.push('在學校資源背景下評估，不因缺少進階課程扣分');
+      else { A -= 3; r.risks.push('未選修學校可提供的進階課程'); r.factors.push('課程難度不足 -3（示意）'); }
+    }
+    if (!p.profRank) r.notes.push('未提供年級排名：可以接受，但由學校在概況中說明更好');
+  }
+
+  const E = actIdx(p), Q = qualIdx(p);
+  let idx = pub ? A * .6 + E * .2 + Q * .2 : A * .45 + E * .3 + Q * .25;
+
+  if (p.alumni && p.alumniScore <= 3 && p.essay >= 8) {
+    idx -= 6; r.risks.push('面試表現與文書水準落差大，可能引起真實性核查');
+  }
+  const mj = MAJORS[p.major];
+  if (mj.hot) {
+    if (s.majorAdmit) { idx -= 4; r.factors.push('高競爭學院 -4（示意）'); r.risks.push(`${s.cn} 按學院/專業錄取，${mj.l} 競爭更激烈`); }
+    else r.notes.push('該校按大學整體錄取，填報熱門專業的影響有限');
+  }
+  if (pub && p.mode === 'freshman') {
+    if (p.residency === s.st) r.notes.push('州內申請人錄取池');
+    else { idx -= 4; r.factors.push('非州內 -4（示意）'); r.risks.push('州外或國際生錄取池更競爭'); }
+    if (s.note) r.notes.push(s.note);
+  }
+  if (p.mode === 'freshman') {
+    if (p.earlySchool === s.id) {
+      if (A >= s.bar - 5 && Q >= 70) { idx += 3; r.factors.push(`${s.early} 提前申請 +3（示意，僅對材料完整的申請人有效）`); }
+      else r.risks.push(`${s.early} 提前申請無法彌補學術或材料短板`);
+      if (s.early === 'ED') r.notes.push('ED 具約束力：錄取後須入讀並撤回其他申請');
+    }
+    if (p.aid === 'yes' && p.residency === 'intl') {
+      if (pub) r.notes.push('公立大學對國際生的需求型資助非常有限');
+      else if (s.nb === true) r.notes.push('國際生 Need-Blind：申請資助不影響錄取');
+      else if (s.nb === 'verify') r.risks.push('國際生資助政策需核實');
+      else { idx -= 4; r.factors.push('國際生 Need-Aware -4（示意）'); r.risks.push('國際生 Need-Aware：申請資助會影響錄取'); }
+    }
+    if (p.hook === 'legacy') {
+      if (s.noLegacy) r.risks.push('該校依校策或州法不考慮校友子女身份');
+      else { idx += 4; r.factors.push('校友子女 +4（示意）'); }
+    }
+    if (p.hook === 'donor') r.notes.push(s.noDonor ? '該校所在州法律禁止考慮捐贈關係' : '捐贈關係的影響無法量化，未計入指數');
+    if (p.hook === 'athlete') r.notes.push('運動員特招以教練招募名單為準，本模型不評估');
+  }
+  langCheck(r, p, 7.0);
+  if (s.verify) r.notes.push(s.verify);
+  grade(r, idx, s.bar, p);
+  if (A < s.bar - 15) { r.status = 'Unlikely'; r.risks.push('學術指數明顯低於該校常見錄取區間'); }
+  return r;
+}
+
+/* ================= UC ================= */
+function evalUC(s, p) {
+  if (p.mode === 'master') return evalMaster(s, p);
+  const r = base(s);
+  let A;
+  if (p.mode === 'transfer') {
+    if (!p.majorPrep && MAJORS[p.major].stem) return inel(r, '未完成該專業 Major Prep 先修課，UC 轉學通常不予錄取', '按 ASSIST 列表補齊先修課');
+    if (p.contract === 'tag') r.risks.push('TAG 不適用於 UCLA、UC Berkeley、UC San Diego');
+    if (p.contract === 'adt') r.notes.push('ADT 主要對應 CSU，對 UC 沒有直接加分');
+    if (p.curriculum !== 'cc') r.risks.push('UC 轉學優先錄取加州社區學院學生');
+    A = interp(p.colGpa, GPA_PTS);
+  } else {
+    A = acadUS(p);
+    r.notes.push('UC 不看 SAT/ACT');
+    if (p.curriculum === 'cn_gaokao') r.notes.push('國際生按高中成績單評估');
+  }
+  const piq = (p.essay * .6 + p.intellect * .4) * 10;
+  let idx = A * .6 + actIdx(p) * .2 + piq * .2;
+  if (p.residency !== 'CA') { idx -= 4; r.factors.push('非加州居民 -4（示意）'); r.risks.push('非加州居民錄取池更競爭'); }
+  if (['cs', 'data_science', 'engineering', 'ai'].includes(p.major)) { idx -= 4; r.factors.push('受限專業 -4（示意）'); r.risks.push('受限專業（capped/impacted）按專業單獨競爭'); }
+  langCheck(r, p, 7.0);
+  return grade(r, idx, s.bar, p);
+}
+
+/* ================= 英國 ================= */
+function evalUK(s, p) {
+  if (p.mode === 'master') return evalMaster(s, p);
+  const r = base(s);
+  if (p.mode === 'transfer') return inel(r, '英國 G5 一般不接受本科插班轉學', '重新申請 Year 1，或規劃研究生申請');
+  const mj = MAJORS[p.major];
+  if (p.curriculum === 'cn_gaokao') {
+    if (s.gk === 'no') {
+      return inel(r, s.id === 'ucl' ? 'UCL 本科不接受以高考成績申請（已核實）' : '該校本科不接受以高考成績直接申請',
+        s.id === 'ucl' ? '替代路徑：在 UCL 認可的中國大學完成兩年本科、加權均分 90%' : '考慮 A-Level、IB 或認可預科路徑');
+    }
+    if (s.gk === 'top01') {
+      if (p.gkRank > 0.1) {
+        if (p.gkTimeline === 'gap') return inel(r, '劍橋對高考生的典型要求為全省前 0.1%（已核實），實際排名未達標');
+        r.risks.push('預估排名未達全省前 0.1%，劍橋條件錄取通常以此為準');
+        r.forceMax = 'Unlikely';
+      } else r.notes.push('排名達到劍橋高考典型要求（全省前 0.1%），仍會參考相關單科成績');
+    }
+    if (s.gk === 'ast') {
+      if (p.ast === 'none' || p.ast === 'lt210') return inel(r, 'LSE 高考路徑需同時提供達標的 AST 成績（已核實）', '報考 AST：A 對應 210、A* 對應 250');
+      if (p.ast === '210' && mj.math) return inel(r, `LSE 要求數學 A*/A 的專業需 AST 數學 250（已核實）`, '提升 AST 數學至 250');
+      r.notes.push('AST 成績達標');
+    }
+    if (s.gk === 'verify') r.risks.push('該校是否接受高考申請需核實官網');
+  }
+  if (p.curriculum === 'uk_alevel') {
+    const fm = p.al.some(x => x.sub === 'fm');
+    if (!fm) {
+      if (s.id === 'cambridge' && p.major === 'math') return inel(r, '劍橋數學要求 A-Level Further Maths', '加修 Further Maths');
+      if (mj.fm) r.risks.push(`${mj.l} 通常強烈建議修讀 Further Maths`);
+    }
+    if (p.al.length < 3) r.risks.push('A-Level 科目少於 3 門');
+  }
+  if (p.curriculum === 'us_ap') {
+    r.notes.push('英國按 AP 成績與 SAT/ACT 評估美國課程申請人，具體要求需核實');
+    if (p.ap5 < 5) r.risks.push('頂尖院校對美國課程通常要求 5 門以上相關 AP 5 分');
+  }
+  if (p.curriculum === 'ib' && mj.math && !p.ibAA) r.risks.push('理工/經濟類通常要求 Math AA HL');
+  if (p.curriculum === 'hk_dse' && mj.math && !p.dseM) r.risks.push('理工/量化類通常要求 DSE M1/M2');
+
+  const A = acadGeneral(p);
+  const test = ukTest(s.id, p.major);
+  const iv = s.iv === 'all' || (s.iv === 'some' && ['premed', 'engineering', 'physics', 'chemistry', 'math'].includes(p.major));
+  const ps = (p.intellect * .5 + p.acadExt * .3 + p.ukSc * .2) * 10;
+  const wA = .5, wT = test ? .25 : 0, wP = .15, wI = iv ? .1 : 0;
+  const idx = (A * wA + (test ? p.ukPct : 0) * wT + ps * wP + (iv ? p.ukIv * 10 : 0) * wI) / (wA + wT + wP + wI);
+
+  if (test) {
+    r.factors.push(`對應筆試：${test}（需核實）`);
+    if (p.ukPct < 50) { r.risks.push(`${test} 百分位偏低，影響面試邀請`); r.acts.push(`系統準備 ${test}`); }
+  } else r.notes.push('本模型未對應該專業的入學筆試，請核實');
+  r.notes.push(iv ? (s.iv === 'all' ? '學院學術面試是關鍵環節' : '該專業可能設面試') : '該校/專業通常不設常規面試');
+  langCheck(r, p, s.ielts);
+  if (s.verify) r.notes.push(s.verify);
+  return grade(r, idx, s.bar, p);
+}
+
+/* ================= 香港 ================= */
+function evalHK(s, p) {
+  if (p.mode === 'master') return evalMaster(s, p);
+  const r = base(s);
+  if (p.mode === 'transfer') r.notes.push('持副學士或大學學歷申請，按各校非聯招或高年級入學規則評估');
+  if (p.curriculum === 'cn_gaokao') {
+    r.notes.push(s.route); r.notes.push('以省內位次、英語單科與面試為主');
+    if (p.gkEng < 120) r.risks.push('高考英語單科低於港校常見要求（約 120，需核實）');
+  }
+  if (p.curriculum === 'hk_dse') {
+    if (!p.d3322) return inel(r, '未達 JUPAS 最低入學要求 3322 或公民與社會發展科未達標', '重考或改走副學士銜接');
+    r.notes.push('JUPAS 按各課程計分公式與往年分數評估');
+    if (['3', '2'].includes(p.dseEng)) r.risks.push('英國語文等級偏低，熱門課程較吃虧');
+    if (['cs', 'engineering', 'math', 'physics', 'fina'].includes(p.major) && !p.dseM) r.risks.push('理工/量化課程通常看重 M1/M2');
+  }
+  const idx = acadGeneral(p) * .8 + qualIdx(p) * .1 + actIdx(p) * .1;
+  if (p.curriculum !== 'hk_dse') langCheck(r, p, 6.5);
+  return grade(r, idx, s.bar, p);
+}
+
+/* ================= 新加坡 ================= */
+function evalSG(s, p) {
+  if (p.mode === 'master') return evalMaster(s, p);
+  const r = base(s);
+  if (p.curriculum === 'cn_gaokao') r.notes.push('接受高考申請，部分專業設面試或能力測試（需核實）');
+  if (p.sgAba) r.notes.push('已提交 ABA 材料：作為另一條評估通道，不是固定加分');
+  else r.notes.push('學術略低於分數線時，可考慮 ABA 能力導向招生');
+  r.notes.push('學費補助（Tuition Grant）通常附帶畢業後在新加坡工作的服務協議');
+  const idx = acadGeneral(p) * .8 + qualIdx(p) * .1 + actIdx(p) * .1;
+  langCheck(r, p, 6.5);
+  return grade(r, idx, s.bar, p);
+}
+
+/* ================= 加拿大 ================= */
+function evalCA(s, p) {
+  if (p.mode === 'master') return evalMaster(s, p);
+  const r = base(s);
+  if (p.curriculum === 'cn_gaokao') r.notes.push('通常需同時提交高考成績與高中成績單（需核實）');
+  let bar = s.bar;
+  if (s.id === 'uoft' && ['cs', 'engineering', 'business', 'ai', 'data_science'].includes(p.major)) { bar += 4; r.risks.push('多倫多大學該方向競爭激烈，並需補充材料'); }
+  if (s.id === 'ubc' && ['cs', 'engineering', 'business'].includes(p.major)) { bar += 3; r.risks.push('UBC 該方向分數線較高'); }
+  const A = acadGeneral(p);
+  let idx;
+  if (s.id === 'mcgill') { idx = A; r.notes.push('以學術成績為主'); }
+  else if (s.id === 'ubc') { idx = A * .8 + qualIdx(p) * .2; r.notes.push('Personal Profile 對所有專業都計入評估'); }
+  else idx = A * .88 + qualIdx(p) * .07 + actIdx(p) * .05;
+  langCheck(r, p, 6.5);
+  return grade(r, idx, bar, p);
+}
+
+/* ================= 澳洲 ================= */
+function evalAU(s, p) {
+  if (p.mode === 'master') return evalMaster(s, p);
+  const r = base(s);
+  if (p.curriculum === 'cn_gaokao' && !p.designated) {
+    return inel(r, '墨爾本大學不接受內地普高直錄，一般需完成 Trinity College 預科（已核實）', '就讀 Trinity College Foundation Studies，或確認是否屬於指定重點高中');
+  }
+  r.notes.push('按專業最低分數與先修科目錄取');
+  langCheck(r, p, 6.5);
+  return grade(r, acadGeneral(p), s.bar, p);
+}
+
+/* ================= 3+2 ================= */
+function evalDual(s, p) {
+  const r = base(s);
+  if (p.mode !== 'transfer') return inel(r, '3+2 項目需先在合作院校完成 2 至 3 年學業，不接受高中生或研究生直接申請', '先申請合作文理學院');
+  if (p.major !== 'engineering') return inel(r, '3+2 項目僅限工程方向');
+  if (s.aff === 'required' && !p.partner32) return inel(r, '加州理工 3/2 只接受指定合作院校的學生');
+  if (s.aff === 'verify' && !p.partner32) r.risks.push('非合作院校學生的申請資格需核實');
+  if (s.aff === 'open' && !p.partner32) r.notes.push('非合作院校學生可以申請，但條件更嚴格（需核實）');
+  if (p.colGpa < 3.3) r.risks.push('GPA 低於多數合作項目常見要求（約 3.3，需核實）');
+  return grade(r, interp(p.colGpa, GPA_PTS) * .8 + qualIdx(p) * .2, s.bar, p);
+}
+
+/* ================= 研究生 ================= */
+function evalMaster(s, p) {
+  const r = base(s);
+  const A = interp(p.pgAvg, PCT_PTS);
+  if (p.pgType === 'phd') {
+    const idx = p.phdFit * 10 * .35 + p.phdEvidence * 10 * .25 + p.rec * 10 * .2 + A * .2;
+    r.notes.push('博士錄取取決於導師是否招生、研究方向匹配與經費，指數僅作參考');
+    r.acts.push('聯繫目標導師，確認招生名額與研究方向');
+    if (p.phdFit < 6) r.risks.push('研究方向與目標導師的匹配度不足');
+    langCheck(r, p, 7.0);
+    return grade(r, idx, s.bar - 6, p);
+  }
+  if (s.sys === 'uk') {
+    if (!p.pgList && p.pgAvg < 90) return inel(r, '名單外院校通常要求加權均分 90% 以上（UCL、LSE 已核實，其他院校以各校名單為準）');
+    if (p.pgList && p.pgAvg < 85) r.risks.push('名單內院校通常要求 85% 以上，商科與法學更高');
+  }
+  const idx = A * .6 + qualIdx(p) * .25 + p.pgWork * 10 * .15;
+  r.notes.push('研究生按專業評估，GRE/GMAT 要求依專業而定');
+  langCheck(r, p, 7.0);
+  return grade(r, idx, s.bar - 6, p);
+}
+
+function evalSchool(s, p) {
+  switch (s.sys) {
+    case 'usp': case 'uspub': return evalUS(s, p);
+    case 'uc': return evalUC(s, p);
+    case 'uk': return evalUK(s, p);
+    case 'hk': return evalHK(s, p);
+    case 'sg': return evalSG(s, p);
+    case 'ca': return evalCA(s, p);
+    case 'au': return evalAU(s, p);
+    case 'dual': return evalDual(s, p);
+  }
+}
+
+/* ================= 呈現 ================= */
+const ST = {
+  Strong: ['優勢', 'bg-emerald-100 text-emerald-700', 'border-emerald-200'],
+  Target: ['匹配', 'bg-sky-100 text-sky-700', 'border-sky-200'],
+  Reach: ['衝刺', 'bg-amber-100 text-amber-700', 'border-amber-200'],
+  Unlikely: ['難度大', 'bg-rose-100 text-rose-700', 'border-rose-200'],
+  Ineligible: ['不符資格', 'bg-slate-200 text-slate-700', 'border-slate-300 bg-slate-50']
+};
+function renderPortfolio(rs, p) {
+  const cnt = { Strong: 0, Target: 0, Reach: 0, Unlikely: 0, Ineligible: 0 };
+  rs.forEach(r => cnt[r.status]++);
+  const ids = rs.map(r => r.s.id), warn = [];
+  if (p.mode === 'freshman') {
+    if (ids.includes('oxford') && ids.includes('cambridge')) warn.push('同一申請季只能申請牛津或劍橋其中一所');
+    const uk = rs.filter(r => r.s.sys === 'uk').length;
+    if (uk > 5) warn.push('UCAS 最多 5 個志願');
+    if (ids.includes('oxford') || ids.includes('cambridge') || (uk && p.major === 'premed')) warn.push('牛劍與醫學類 UCAS 截止日通常為 10 月 15 日');
+    if (p.earlySchool) {
+      const es = SCH(p.earlySchool);
+      if (es.early === 'REA' || es.early === 'SCEA') warn.push(`${es.cn} 為限制性提前申請，通常不能同時提前申請其他美國私立大學（例外規則請核實）`);
+      if (es.early === 'ED') warn.push(`${es.cn} 為 ED，錄取具約束力`);
+    }
+  }
+  if (cnt.Target + cnt.Strong === 0) warn.push('目前沒有匹配或優勢院校，建議加入把握較高的學校');
+  if (rs.length >= 3 && cnt.Reach + cnt.Unlikely > rs.length * .7) warn.push('衝刺院校比例偏高');
+  if (cnt.Ineligible) warn.push(`有 ${cnt.Ineligible} 所院校資格不符，請先處理或替換`);
+  const acts = [...new Set(rs.flatMap(r => r.acts))].slice(0, 8);
+  $('portfolio').innerHTML = `<div class="card">
+    <div class="h">選校結構總覽</div>
+    <div class="grid grid-cols-5 gap-2 mb-4 text-center">
+      ${['Strong', 'Target', 'Reach', 'Unlikely', 'Ineligible'].map(k => `<div class="p-2 rounded-xl ${ST[k][1]}"><div class="text-2xl font-black mono">${cnt[k]}</div><div class="text-[10px] font-bold">${ST[k][0]}</div></div>`).join('')}
+    </div>
+    ${warn.length ? `<div class="box border-amber-200 bg-amber-50"><p class="text-xs font-bold text-amber-900 mb-1">申請規則與結構提示</p><ul class="text-[11px] text-slate-700 list-disc pl-4 space-y-0.5">${warn.map(w => `<li>${w}</li>`).join('')}</ul></div>` : ''}
+    ${acts.length ? `<div class="box border-indigo-200 bg-indigo-50"><p class="text-xs font-bold text-indigo-900 mb-1">優先行動</p><ol class="text-[11px] text-slate-700 list-decimal pl-4 space-y-0.5">${acts.map(a => `<li>${a}</li>`).join('')}</ol></div>` : ''}
+  </div>`;
+}
+function renderCards(rs) {
+  $('cards').innerHTML = rs.map(r => {
+    const [lab, badge, border] = ST[r.status];
+    const inelig = r.status === 'Ineligible';
+    const lo = Math.max(0, r.idx - 6), hi = Math.min(99, r.idx + 5);
+    return `<div class="card border-2 ${border}">
+      <div class="flex justify-between items-start gap-3 mb-2">
+        <div><h3 class="font-black text-slate-900 text-base">${r.s.cn} <span class="text-xs text-slate-400 font-normal">${r.s.en}${r.s.rate ? ' • 總體錄取率 ' + r.s.rate : ''}</span></h3></div>
+        <span class="text-xs font-black px-3 py-1 rounded-full ${badge}">${lab}</span>
+      </div>
+      ${r.risks.length ? `<div class="mb-2"><p class="text-[10px] font-bold text-rose-700 mb-1">主要風險</p><ul class="text-[11px] text-slate-700 list-disc pl-4 space-y-0.5">${r.risks.map(x => `<li>${x}</li>`).join('')}</ul></div>` : ''}
+      ${r.acts.length ? `<div class="mb-2"><p class="text-[10px] font-bold text-indigo-700 mb-1">建議行動</p><ul class="text-[11px] text-slate-700 list-disc pl-4 space-y-0.5">${r.acts.map(x => `<li>${x}</li>`).join('')}</ul></div>` : ''}
+      ${r.factors.length ? `<div class="flex flex-wrap gap-1 mb-2">${r.factors.map(f => `<span class="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded">${f}</span>`).join('')}</div>` : ''}
+      ${r.notes.length ? `<div class="space-y-0.5 mb-2">${r.notes.map(n => `<p class="note">ⓘ ${n}</p>`).join('')}</div>` : ''}
+      ${inelig ? '' : `<p class="text-[10px] text-slate-400 mono">競爭力指數 ${r.idx}（區間 ${lo} 至 ${hi}，示意值，不是錄取機率）</p>`}
+    </div>`;
+  }).join('');
+}
+function run() {
+  if (!selected.length) { alert('請至少加入一所院校'); return; }
+  ran = true;
+  const p = getProfile();
+  const rs = selSchools().map(s => evalSchool(s, p));
+  $('empty').classList.add('hidden');
+  $('results').classList.remove('hidden');
+  renderPortfolio(rs, p);
+  renderCards(rs);
+}
+
+/* ================= 事件 ================= */
+function onChange() { refresh(); if (ran) run(); }
+document.addEventListener('input', e => { if (e.target.id !== 'school-add') onChange(); });
+document.addEventListener('change', e => {
+  const id = e.target.id;
+  if (id === 'school-add') {
+    const v = e.target.value;
+    if (v && !selected.includes(v)) {
+      if (selected.length >= 10) alert('最多評估 10 所院校');
+      else selected.push(v);
+    }
+    e.target.value = '';
+    renderChips(); onChange();
+    return;
+  }
+  if (id === 'curriculum') onCurr();
+  onChange();
+});
+document.addEventListener('click', e => {
+  const rm = e.target.getAttribute && e.target.getAttribute('data-rm');
+  if (rm) { selected = selected.filter(x => x !== rm); renderChips(); onChange(); }
+  if (e.target.id === 'run') run();
+});
+
+buildStatic();
+renderChips();
+refresh();
+</script>
+</body>
+</html>

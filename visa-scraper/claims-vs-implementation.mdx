@@ -1,0 +1,74 @@
+---
+title: "功能声明与实现差异"
+sidebarTitle: "声明与实现差异"
+description: "对照 visa_requirements_scraper.py 的文档字符串与注释，逐项说明代码实际实现了什么、没有实现什么。"
+---
+
+脚本的模块说明、类说明和注释描述了多项"实时抓取"和"问卷自动化"能力。下表根据源码核对每项声明的实际实现程度。
+
+<Info>
+  状态说明：**已实现** 表示代码行为与声明一致；**部分实现** 表示有相关代码但覆盖不完整；**未实现** 表示代码中没有对应逻辑，或只是返回预置内容。
+</Info>
+
+## VFS Global（中国至全部目的地）
+
+| 声明 | 状态 | 实际行为 |
+| --- | --- | --- |
+| 从 VFS 首页动态发现所有目的地 | 部分实现 | 只匹配页面中 `visa.vfsglobal.com/chn/` 链接，结果与内置 42 国列表**合并**，因此已下线的目的地永远不会被移除 |
+| 拦截 Contentful CMS JSON，获取签证子类、管辖规则和清单 | 部分实现 | 拦截到的 JSON 只用于正则提取 `.pdf` 链接，子类与管辖规则字段未被解析 |
+| 操作签证类型下拉框（`mat-select` / `<select>`）提取子类专属清单 | 未实现 | 只读取已渲染的 `option` 文本，没有任何点击或选择操作；传入的 `targetSubcat` 参数未被使用 |
+| 识别"仅限某领区"的子类 | 部分实现 | 仅当选项文本包含 `jurisdiction only` 时记录；中文页面或其他措辞无法识别 |
+| 提取管辖规则 | 部分实现 | 任何包含 `jurisdiction` 的段落都会被当作规则，噪音较大 |
+| 子类专属材料清单 | 未实现 | 材料主体来自 `_build_vfs_standard_and_conditional_docs` 的通用模板，所有 42 个目的地相同 |
+
+## TLScontact 法国 + France-Visas
+
+| 声明 | 状态 | 实际行为 |
+| --- | --- | --- |
+| 执行 France-Visas 四步官方问卷 | 未实现 | 只打开问卷页面并检查是否出现文本 `Check your visa need`，不填写任何问题 |
+| 根据问卷结果生成材料矩阵 | 未实现 | 材料来自 `_france_purpose_doc_title` / `_france_purpose_doc_desc` 的硬编码字典 |
+| 拦截 API 数量（`raw_intercepted_api_count`） | 误导 | 法国流程中该值在检测到问卷页面文字时加 1，并不代表拦截到任何 API 响应 |
+| 抓取 TLScontact 通知 | 已实现 | 提取包含 `France-Visas`、`pre-pay`、`appointment` 的段落，最多 8 条 |
+
+## TLScontact 以色列
+
+| 声明 | 状态 | 实际行为 |
+| --- | --- | --- |
+| 抓取 visa-types 与 useful-content 页面 PDF | 已实现 | 提取页面链接并去重 |
+| 抓取管辖原则新闻页（news/1618） | 未实现 | 该 URL 只作为 `official_questionnaire_url` 输出，从未访问 |
+| 子类材料 | 未实现 | 来自硬编码的 `il_subcat_map`，未与抓取到的 PDF 内容关联 |
+| 预置 PDF 链接 | 需核实 | 两个预置 PDF 位于 `/media/cn/hkg/` 路径下，可能对应香港而非内地中心 |
+
+## TLScontact 荷兰 + NetherlandsWorldwide
+
+| 声明 | 状态 | 实际行为 |
+| --- | --- | --- |
+| 抓取 NetherlandsWorldwide 官方清单 | 未实现 | 页面被打开并等待 2 秒后直接关闭，没有提取任何内容 |
+| 按子类选择官方清单 | 部分实现 | 按子类选择 URL，但 `eu_family` 键无法通过 CLI 触达 |
+| 抓取 TLScontact 提醒 | 已实现 | 提取包含 `A4 format`、`staple`、`Travel Medical Insurance` 的段落 |
+
+## 多维度条件规则引擎
+
+| 声明的维度 | 状态 | 实际行为 |
+| --- | --- | --- |
+| 签证类别（短期 / 长期 / 过境） | 未实现 | `visa_category` 只出现在说明文本中，不改变任何材料 |
+| 签证子类 | 部分实现 | 影响法国目的说明、以色列子类和荷兰清单 URL；对 VFS 材料无影响 |
+| 国籍 | 已实现 | 区分中国籍（户口簿与身份证）与外籍（居留许可） |
+| 居住状态 | 部分实现 | 只有 `cross_jurisdiction_resident` 生效，`foreign_resident` 与 `local_citizen` 无差异 |
+| 就业状态 | 已实现 | 覆盖在职、退休、自雇、学生、无固定收入 |
+| 婚姻状况 | 部分实现 | 仅在无固定收入时生效，且 CLI 无法设置 |
+| 住宿类型 `accommodation_type` | 未实现 | 字段已定义，从未使用 |
+| 59 个月内采集过申根指纹 | 未实现 | 字段已定义，从未使用；生物识别豁免仍以固定文本输出 |
+| 护照类型 | 部分实现 | 只影响法国与荷兰在线版的保险必需性，CLI 无法设置 |
+
+## 运行模式
+
+| 声明 | 状态 | 实际行为 |
+| --- | --- | --- |
+| `--dry-run` 离线确定性模式 | 已实现 | 使用独立的离线方法生成结果 |
+| 实时抓取模式 | 部分实现 | 抓取失败时异常被记录为 warning，随后仍输出模板材料，结果与成功时无法区分 |
+| Playwright 缺失时的行为 | 风险 | 未传 `--dry-run` 也会自动切换到离线模板，仅记录一条 warning |
+
+## 下一步
+
+整改优先级与具体措施见 [生产就绪检查清单](/visa-scraper/production-readiness)。

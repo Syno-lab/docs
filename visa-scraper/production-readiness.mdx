@@ -1,0 +1,77 @@
+---
+title: "生产就绪检查清单"
+sidebarTitle: "生产就绪检查清单"
+description: "按工程维度评估 visa_requirements_scraper.py 是否达到工业级生产标准，并列出上线前必须完成的整改项。"
+---
+
+本页基于 `visa_requirements_scraper.py` 源码逐项评估。结论：**当前版本未达到工业级生产标准**，适合作为原型或内部参考，不应直接作为签证材料的权威数据源。
+
+<Warning>
+  脚本在缺少 Playwright 时自动转为离线模板生成；实时抓取失败时仍会追加预置材料清单。输出中没有任何字段标明数据来自实时页面还是内置模板。在修复前，所有输出都应视为**未经验证的参考信息**。
+</Warning>
+
+## 评估总览
+
+| 维度 | 评级 | 主要问题 |
+| --- | --- | --- |
+| 数据真实性与可追溯性 | 不合格 | 无数据来源标记，失败与成功输出外观一致 |
+| 错误处理与可观测性 | 不合格 | 异常被吞掉，退出码恒为 `0` |
+| 输入校验 | 不合格 | 参数组合无校验，未知城市静默回退到北京 |
+| 抓取健壮性 | 需改进 | 固定等待时间，无重试、退避、限速 |
+| 合规与安全 | 高风险 | 反自动化检测规避、伪造 UA、`--no-sandbox` |
+| 可维护性 | 需改进 | 在线与离线逻辑重复且内容已出现分叉 |
+| 测试与交付 | 缺失 | 无单元测试、无依赖锁定、无配置文件 |
+| 输出契约 | 需改进 | 无 schema 版本，CSV 丢失关键字段 |
+
+## 上线前必须完成（阻断项）
+
+<Steps>
+  <Step title="为每条结果增加数据状态字段">
+    在 `VisaRequirementResult` 中增加 `data_source`（`live` / `template` / `mixed`）、`scrape_status`（`ok` / `partial` / `failed`）和 `errors` 列表。每个 `DocumentItem` 增加 `origin` 字段，区分页面提取、PDF 提取和内置规则。
+  </Step>
+  <Step title="禁止静默降级">
+    Playwright 缺失且未显式传入 `--dry-run` 时应直接报错退出，而不是只记录一条 warning 后改用离线模板。
+  </Step>
+  <Step title="退出码反映真实结果">
+    任一目标抓取失败时返回非零退出码（例如部分失败为 `2`，全部失败为 `1`），便于调度系统告警。
+  </Step>
+  <Step title="校验输入组合">
+    拒绝矛盾或无效组合：例如 `--provider all --destination FR` 会让 VFS 访问不存在的 `/chn/en/fr/` 路径；`nationality=USA` 与 `residency=local_citizen` 互相矛盾；未登记的城市不应回退到北京 VAC。
+  </Step>
+  <Step title="核实全部硬编码事实">
+    每条硬编码规则（日期、金额、照片规格、管辖原则）需记录来源 URL 和核实日期，并设定复核周期。详见 [已知限制](/visa-scraper/known-limitations)。
+  </Step>
+  <Step title="完成合规评审">
+    移除或经法务批准后保留反检测措施（`--disable-blink-features=AutomationControlled`、覆盖 `navigator.webdriver`、伪造 Chrome UA），并确认目标站点服务条款与 robots.txt 允许自动访问。
+  </Step>
+</Steps>
+
+## 应尽快完成（重要项）
+
+- **重试与限速**：为页面导航和 PDF 下载增加指数退避重试，并对同一域名设置请求间隔。
+- **替换固定等待**：用 `wait_for_selector` 或 `wait_for_load_state("networkidle")` 替换 `wait_for_timeout(2000)` 一类固定等待。
+- **消除重复逻辑**：`_offline_tls_france` 等离线方法与在线方法各自维护一份材料清单，内容已不一致（例如荷兰离线版把保险合并进住宿条目并恒为必需，忽略外交护照豁免）。应抽取为单一规则源。
+- **PDF 处理加固**：按 URL 哈希命名文件以避免同名覆盖；校验 `Content-Type` 与文件大小上限；复用同一个 `httpx.AsyncClient`；把错误信息与摘要文本分开存放。
+- **日志配置移出模块顶层**：`logging.basicConfig` 应放到 `async_main` 中，避免脚本被作为库导入时篡改调用方的日志配置。
+- **补齐 CLI 参数**：`marital_status`、`passport_type`、`married_to_destination_national`、`eu_eea_swiss_family_member`、`language`、`headless` 等字段已在规则引擎中使用，但无法从命令行设置。
+
+## 建议完成（改进项）
+
+- 增加单元测试，覆盖 `ConditionalRequirementResolver` 的全部分支和 `resolve_vac_code` 的回退行为。
+- 增加 `requirements.txt` 或 `pyproject.toml` 并锁定版本。
+- 输出加入 `schema_version`，CSV 补充 `description`、`template_or_pdf_url`、`scraped_at_utc`、`data_source` 列。
+- 对多个目的地的抓取引入有上限的并发（例如 `asyncio.Semaphore`）。
+- 增加结果快照与差异对比，在官方要求变化时触发人工复核。
+- 删除未使用的导入与变量：`BeautifulSoup`、`urljoin`、`dummy_ctx`、`bodyText`、`targetSubcat`。
+
+## 相关页面
+
+<CardGroup cols={2}>
+  <Card title="功能声明与实现差异" icon="code-compare" href="/visa-scraper/claims-vs-implementation">
+    文档字符串描述的能力与代码实际行为的逐项对照。
+  </Card>
+
+  <Card title="已知限制" icon="triangle-exclamation" href="/visa-scraper/known-limitations">
+    使用输出前必须了解的数据准确性与覆盖范围限制。
+  </Card>
+</CardGroup>

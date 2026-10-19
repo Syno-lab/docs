@@ -16,6 +16,20 @@
           "index",
           "quickstart"
         ]
+      },
+      {
+        "group": "签证材料抓取脚本审计",
+        "pages": [
+          "visa-scraper/production-readiness",
+          "visa-scraper/claims-vs-implementation",
+          "visa-scraper/known-limitations"
+        ]
+      },
+      {
+        "group": "架构决策",
+        "pages": [
+          "retrieval-decision"
+        ]
       }
     ],
     "global": {
